@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 def get_curve(dir_name, stypes = ['Baseline', 'Gaussian_LDA']):
     tp, fp = dict(), dict()
-    tnr_at_tpr95 = dict()
+    tnr_at_tpr95, fnr_at_fpr95 = dict(), dict()
     for stype in stypes:
         known = np.loadtxt('{}/confidence_{}_In.txt'.format(dir_name, stype), delimiter='\n')
         novel = np.loadtxt('{}/confidence_{}_Out.txt'.format(dir_name, stype), delimiter='\n')
@@ -52,10 +52,14 @@ def get_curve(dir_name, stypes = ['Baseline', 'Gaussian_LDA']):
                     fp[stype][l+1] = fp[stype][l]
         tpr95_pos = np.abs(tp[stype] / num_k - .95).argmin()
         tnr_at_tpr95[stype] = 1. - fp[stype][tpr95_pos] / num_n
-    return tp, fp, tnr_at_tpr95
+
+        fpr95_pos = np.abs(fp[stype] / num_k - .95).argmin()
+        fnr_at_fpr95[stype] = 1. - tp[stype][fpr95_pos] / num_n
+
+    return tp, fp, tnr_at_tpr95, fnr_at_fpr95
 
 def metric(dir_name, stypes = ['Bas', 'Gau'], verbose=False):
-    tp, fp, tnr_at_tpr95 = get_curve(dir_name, stypes)
+    tp, fp, tnr_at_tpr95, fnr_at_fpr95 = get_curve(dir_name, stypes)
     results = dict()
     mtypes = ['TNR', 'AUROC', 'DTACC', 'AUIN', 'AUOUT']
     if verbose:
@@ -74,6 +78,12 @@ def metric(dir_name, stypes = ['Bas', 'Gau'], verbose=False):
         results[stype][mtype] = tnr_at_tpr95[stype]
         if verbose:
             print(' {val:6.3f}'.format(val=100.*results[stype][mtype]), end='')
+
+        # FNR
+        # mtype = 'TNR'
+        # results[stype][mtype] = tnr_at_tpr95[stype]
+        if verbose:
+            print('FNR:  {val:6.3f}'.format(val=100.*fnr_at_fpr95[stype]), end='')
         
         # AUROC
         mtype = 'AUROC'
