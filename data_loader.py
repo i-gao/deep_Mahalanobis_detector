@@ -6,8 +6,10 @@ from torch.utils.data import DataLoader
 import os
 
 # densenet transform
-TRANSFORM = transforms.Compose([transforms.ToTensor(), transforms.Normalize(
-    (125.3/255, 123.0/255, 113.9/255), (63.0/255, 62.1/255.0, 66.7/255.0)), ])
+# TRANSFORM = transforms.Compose([transforms.ToTensor(), transforms.Normalize(
+#     (125.3/255, 123.0/255, 113.9/255), (63.0/255, 62.1/255.0, 66.7/255.0)), ])
+TRANSFORM = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),])
+
 
 
 def getSVHN(batch_size, TF, data_root='/tmp/public_dataset/pytorch', train=True, val=True, **kwargs):

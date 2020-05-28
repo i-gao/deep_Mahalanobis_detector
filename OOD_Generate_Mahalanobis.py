@@ -3,7 +3,7 @@ Adapted 2020 by Irena Gao
 Forked from Kimin Lee: https://github.com/pokaxpoka/deep_Mahalanobis_detector
 
 Generates Mahalanobis scores for an (in-dataset, out-dataset) pair. 
-Model: DenseNet3
+Model: resnet
 
 """
 from __future__ import print_function
@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--in_data', required=True,
                     help='cifar10 | cifar100 | svhn')
 parser.add_argument('--out_data', required=True,
-                    help='cifar10 | cifar100 | svhn')
+                    help='svhn | imagenet_resize | lsun_resize')
 parser.add_argument('--batch_size', type=int, default=200,
                     metavar='N', help='batch size for data loader')
 parser.add_argument('--test_noise', type=float, default=0.01,
@@ -45,8 +45,8 @@ def main():
     - gpu: gpu index
     """
     torch.cuda.set_device(args.gpu) 
-    NET_PATH = './pre_trained/densenet_' + args.in_data + '.pth'
-    SAVE_PATH = './output/scores/densenet_' + args.in_data + '/'
+    NET_PATH = './pre_trained/resnet_' + args.in_data + '.pth'
+    SAVE_PATH = './output/scores/resnet_' + args.in_data + '/'
     if not os.path.isdir(SAVE_PATH):
         os.mkdir(SAVE_PATH)
 
@@ -74,17 +74,12 @@ class MahalanobisGenerator:
         self.save_path = save_path
 
         # load training data
-        self.train_loader = data_loader.getTargetDataSet(
+        self.train_loader, _ = data_loader.getTargetDataSet(
             self.in_data, self.batch_size)
 
         # load model
-        if self.in_data == 'svhn':
-            self.model = models.DenseNet3(100, self.num_classes)
-            self.model.load_state_dict(torch.load(
-                net_path, map_location="cuda:" + str(args.gpu)))
-        else:
-            self.model = torch.load(
-                net_path, map_location="cuda:" + str(args.gpu))
+        self.model = models.ResNet34(num_c=self.num_classes)
+        self.model.load_state_dict(torch.load(net_path, map_location = "cuda:" + str(args.gpu)))
         self.model.cuda()
 
         # get information about num layers, activation sizes by trying a test input
@@ -152,14 +147,21 @@ class MahalanobisGenerator:
         group_lasso = sklearn.covariance.EmpiricalCovariance(assume_centered=False)
         correct, total = 0, 0
     
-        num_sample_per_class = np.zeros(self.num_classes)
-        list_features = np.zeros((self.num_layers, self.num_classes))
+        num_sample_per_class = np.empty(self.num_classes)
+        num_sample_per_class.fill(0)
+        list_features = []
+        for i in range(self.num_layers):
+            temp_list = []
+            for j in range(self.num_classes):
+                temp_list.append(0)
+            list_features.append(temp_list)
 
         for data, target in self.train_loader:
             total += data.size(0)
             data = data.cuda()
-            data = Variable(data, volatile=True)
-            output, out_features = self.model.feature_list(data)
+            data = Variable(data)
+            with torch.no_grad():
+                output, out_features = self.model.feature_list(data)
         
             for i in range(self.num_layers):
                 out_features[i] = out_features[i].view(out_features[i].size(0), out_features[i].size(1), -1)
@@ -255,9 +257,9 @@ class MahalanobisGenerator:
             gradient =  torch.ge(data.grad.data, 0)
             gradient = (gradient.float() - 0.5) * 2
 
-            gradient.index_copy_(1, torch.LongTensor([0]).cuda(), gradient.index_select(1, torch.LongTensor([0]).cuda()) / (63.0/255.0))
-            gradient.index_copy_(1, torch.LongTensor([1]).cuda(), gradient.index_select(1, torch.LongTensor([1]).cuda()) / (62.1/255.0))
-            gradient.index_copy_(1, torch.LongTensor([2]).cuda(), gradient.index_select(1, torch.LongTensor([2]).cuda()) / (66.7/255.0))
+            gradient.index_copy_(1, torch.LongTensor([0]).cuda(), gradient.index_select(1, torch.LongTensor([0]).cuda()) / (0.2023))
+            gradient.index_copy_(1, torch.LongTensor([1]).cuda(), gradient.index_select(1, torch.LongTensor([1]).cuda()) / (0.1994))
+            gradient.index_copy_(1, torch.LongTensor([2]).cuda(), gradient.index_select(1, torch.LongTensor([2]).cuda()) / (0.2010))
             tempInputs = torch.add(data.data, -magnitude, gradient)
     
             noise_out_features = self.model.intermediate_forward(Variable(tempInputs, volatile=True), layer_index)
