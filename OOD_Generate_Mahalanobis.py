@@ -14,6 +14,7 @@ import numpy as np
 import models
 import os
 import lib_generation
+import sklearn.covariance
 
 from torch.autograd import Variable
 
@@ -96,8 +97,10 @@ class MahalanobisGenerator:
 
     ### TRAINING ###
     def train(self):
-        self.sample_mean, self.precision = lib_generation.sample_estimator(
-            self.model, self.num_classes, self.activation_sizes, self.train_loader)
+        """
+        Memorizes sample stats for in_data
+        """
+        self.sample_mean, self.precision = self._get_sample_stats()
 
     ### TESTING ###
     def test(self, out_data, in_data=None, test_noise=args.test_noise):
@@ -109,8 +112,7 @@ class MahalanobisGenerator:
 
         # test inliers
         for i in range(self.num_layers):
-            M_in = lib_generation.get_Mahalanobis_score(self.model, in_test_loader, self.num_classes, self.save_path,
-                                                        True, self.sample_mean, self.precision, i, test_noise)
+            M_in = self._get_Mahalanobis_score(in_test_loader, True, i, test_noise)
             M_in = np.asarray(M_in, dtype=np.float32)
             if i == 0:
                 Mahalanobis_in = M_in.reshape((M_in.shape[0], -1))
@@ -120,8 +122,7 @@ class MahalanobisGenerator:
 
         # test outliers
         for i in range(self.num_layers):
-            M_out = lib_generation.get_Mahalanobis_score(self.model, out_test_loader, self.num_classes, self.save_path,
-                                                            False, self.sample_mean, self.precision, i, test_noise)
+            M_out = self._get_Mahalanobis_score(out_test_loader, False, i, test_noise)
             M_out = np.asarray(M_out, dtype=np.float32)
             if i == 0:
                 Mahalanobis_out = M_out.reshape((M_out.shape[0], -1))
@@ -141,6 +142,145 @@ class MahalanobisGenerator:
         file_name = os.path.join(self.save_path, 'Mahalanobis_%s_%s_%s.npy' % (
             str(test_noise), self.in_data, out_data))
         np.save(file_name, Mahalanobis_data)
+
+    ## HELPER FUNCTIONS ##
+    def _get_sample_stats(self):
+        """
+        Computes sample mean and precision (inverse of covariance) for self.in_data
+        """
+        self.model.eval()
+        group_lasso = sklearn.covariance.EmpiricalCovariance(assume_centered=False)
+        correct, total = 0, 0
+    
+        num_sample_per_class = np.zeros(self.num_classes)
+        list_features = np.zeros((self.num_layers, self.num_classes))
+
+        for data, target in self.train_loader:
+            total += data.size(0)
+            data = data.cuda()
+            data = Variable(data, volatile=True)
+            output, out_features = self.model.feature_list(data)
+        
+            for i in range(self.num_layers):
+                out_features[i] = out_features[i].view(out_features[i].size(0), out_features[i].size(1), -1)
+                out_features[i] = torch.mean(out_features[i].data, 2)
+            
+            # compute the accuracy
+            pred = output.data.max(1)[1]
+            equal_flag = pred.eq(target.cuda()).cpu()
+            correct += equal_flag.sum()
+        
+            # construct the sample matrix
+            for i in range(data.size(0)):
+                label = target[i]
+                if num_sample_per_class[label] == 0:
+                    for j, out in enumerate(out_features):
+                        list_features[j][label] = out[i].view(1, -1)
+                else:
+                    for j, out in enumerate(out_features):
+                        list_features[j][label] = torch.cat((list_features[j][label], out[i].view(1, -1)), 0)             
+                num_sample_per_class[label] += 1
+
+        print('\n Training Accuracy:({:.2f}%)\n'.format(100. * correct / total))
+        
+        # get means
+        sample_mean = []
+        for i, size in enumerate(self.activation_sizes):
+            temp_list = torch.Tensor(self.num_classes, int(size)).cuda()
+            for j in range(self.num_classes):
+                temp_list[j] = torch.mean(list_features[i][j], 0)
+            sample_mean.append(temp_list)
+
+        # get precision 
+        precision = []
+        for k in range(self.num_layers):
+            X = 0
+            for i in range(self.num_classes):
+                if i == 0:
+                    X = list_features[k][i] - sample_mean[k][i]
+                else:
+                    X = torch.cat((X, list_features[k][i] - sample_mean[k][i]), 0)
+            # find inverse            
+            group_lasso.fit(X.cpu().numpy())
+            temp_precision = group_lasso.precision_
+            temp_precision = torch.from_numpy(temp_precision).float().cuda()
+            precision.append(temp_precision)
+        
+        return sample_mean, precision
+
+    def _get_Mahalanobis_score(self, test_loader, true_label_in, layer_index, magnitude):
+        '''
+        Computes Mahalanobis scores for layer @ layer_index
+        - test_loader: test data to compute scores for
+        - true_label_in: flag for whether the true value is in or out
+        - layer_index: layer to compute scores over
+        - magnitude: test time constant noise to add
+
+        return: 
+        - Mahalanobis score from layer_index
+        '''
+        self.model.eval()
+        Mahalanobis = []
+        
+        label = "In" if true_label_in else "In"
+        temp_file_name = '%s/confidence_Ga%s_%s.txt'%(self.save_path, str(layer_index), label)            
+        g = open(temp_file_name, 'w')
+        
+        for data, target in test_loader:
+            data, target = data.cuda(), target.cuda()
+            data, target = Variable(data, requires_grad = True), Variable(target)
+            out_features = self.model.intermediate_forward(data, layer_index)
+            out_features = out_features.view(out_features.size(0), out_features.size(1), -1)
+            out_features = torch.mean(out_features, 2)
+            
+            # compute Mahalanobis score
+            gaussian_score = 0
+            for i in range(self.num_classes):
+                batch_sample_mean = self.sample_mean[layer_index][i]
+                zero_f = out_features.data - batch_sample_mean
+                term_gau = -0.5*torch.mm(torch.mm(zero_f, self.precision[layer_index]), zero_f.t()).diag()
+                if i == 0:
+                    gaussian_score = term_gau.view(-1,1)
+                else:
+                    gaussian_score = torch.cat((gaussian_score, term_gau.view(-1,1)), 1)
+            
+            # Input_processing
+            sample_pred = gaussian_score.max(1)[1]
+            batch_sample_mean = self.sample_mean[layer_index].index_select(0, sample_pred)
+            zero_f = out_features - Variable(batch_sample_mean)
+            pure_gau = -0.5*torch.mm(torch.mm(zero_f, Variable(self.precision[layer_index])), zero_f.t()).diag()
+            loss = torch.mean(-pure_gau)
+            loss.backward()
+            
+            gradient =  torch.ge(data.grad.data, 0)
+            gradient = (gradient.float() - 0.5) * 2
+
+            gradient.index_copy_(1, torch.LongTensor([0]).cuda(), gradient.index_select(1, torch.LongTensor([0]).cuda()) / (63.0/255.0))
+            gradient.index_copy_(1, torch.LongTensor([1]).cuda(), gradient.index_select(1, torch.LongTensor([1]).cuda()) / (62.1/255.0))
+            gradient.index_copy_(1, torch.LongTensor([2]).cuda(), gradient.index_select(1, torch.LongTensor([2]).cuda()) / (66.7/255.0))
+            tempInputs = torch.add(data.data, -magnitude, gradient)
+    
+            noise_out_features = self.model.intermediate_forward(Variable(tempInputs, volatile=True), layer_index)
+            noise_out_features = noise_out_features.view(noise_out_features.size(0), noise_out_features.size(1), -1)
+            noise_out_features = torch.mean(noise_out_features, 2)
+            noise_gaussian_score = 0
+            for i in range(self.num_classes):
+                batch_sample_mean = self.sample_mean[layer_index][i]
+                zero_f = noise_out_features.data - batch_sample_mean
+                term_gau = -0.5*torch.mm(torch.mm(zero_f, self.precision[layer_index]), zero_f.t()).diag()
+                if i == 0:
+                    noise_gaussian_score = term_gau.view(-1,1)
+                else:
+                    noise_gaussian_score = torch.cat((noise_gaussian_score, term_gau.view(-1,1)), 1)      
+
+            noise_gaussian_score, _ = torch.max(noise_gaussian_score, dim=1)
+            Mahalanobis.extend(noise_gaussian_score.cpu().numpy())
+            
+            for i in range(data.size(0)):
+                g.write("{}\n".format(noise_gaussian_score[i]))
+        g.close()
+
+        return Mahalanobis
 
 if __name__ == '__main__':
     main()
