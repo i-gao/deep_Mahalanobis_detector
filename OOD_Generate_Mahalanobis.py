@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--in_data', required=True,
                     help='cifar10 | cifar100 | svhn')
 parser.add_argument('--out_data', required=True,
-                    help='svhn | imagenet_resize | lsun_resize | fgsm | deepfool | bim | cwl2')
+                    help='all | svhn | imagenet_resize | lsun_resize | fgsm | deepfool | bim | cwl2')
 parser.add_argument('--batch_size', type=int, default=200,
                     metavar='N', help='batch size for data loader')
 parser.add_argument('--test_noise', type=float, default=0.01,
@@ -54,7 +54,14 @@ def main():
 
     engine = MahalanobisGenerator(args.in_data, NET_PATH, SAVE_PATH)
     engine.train()
-    engine.test(args.out_data, (args.out_data == "fgsm"))
+
+    if args.out_data == "all":
+        for out_data in ["svhn", "imagenet_resize", "lsun_resize"]:
+            engine.test(out_data, False)
+        for out_data in ["fgsm", "deepfool", "bim", "cwl2"]:
+            engine.test(out_data, True)
+    else:
+        engine.test(args.out_data, args.out_data in ["fgsm", "deepfool", "bim", "cwl2"])
 
 
 class MahalanobisGenerator:
