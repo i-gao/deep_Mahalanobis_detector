@@ -243,7 +243,6 @@ def deepfool(model, input, target, n_classes, train_mode=False, max_iter=5,
     status[pred.ne(target)] = 0
     return (status, r)
 
-
 # Implements universal adversarial perturbations
 # does not really work...
 def universal(model, input, target, n_classes, max_val=0.1, train_mode=False,
@@ -391,6 +390,43 @@ def cw(model, input, target, weight, loss_str, bound=0, tv_weight=0,
     status = torch.zeros(input.size(0)).long()
     status[corr] = 2 * pred[corr].ne(pred_xp[corr]).long() - 1
     return (status, best_w)
+
+def fgsm(inputs):
+    """ 
+    gradient adjustments for fgsm
+    moved from ADV_sample.py
+    """
+    gradient = torch.ge(inputs.grad.data, 0)
+    gradient = (gradient.float()-0.5)*2
+    gradient.index_copy_(1, torch.LongTensor([0]).cuda(), \
+                            gradient.index_select(1, torch.LongTensor([0]).cuda()) / (0.2023))
+    gradient.index_copy_(1, torch.LongTensor([1]).cuda(), \
+                            gradient.index_select(1, torch.LongTensor([1]).cuda()) / (0.1994))
+    gradient.index_copy_(1, torch.LongTensor([2]).cuda(), \
+                            gradient.index_select(1, torch.LongTensor([2]).cuda()) / (0.2010))
+    return gradient
+
+def bim(inputs, target, model, criterion, adv_noise):
+    """ 
+    gradient adjustments for bim
+    moved from ADV_sample.py
+    """
+    gradient = torch.sign(inputs.grad.data)
+    for k in range(5):
+        inputs = torch.add(inputs.data, adv_noise, gradient)
+        inputs = torch.clamp(inputs, MIN_PIXEL, MAX_PIXEL)
+        inputs = Variable(inputs, requires_grad=True)
+        output = model(inputs)
+        loss = criterion(output, target)
+        loss.backward()
+        gradient = torch.sign(inputs.grad.data)
+        gradient.index_copy_(1, torch.LongTensor([0]).cuda(), \
+                                gradient.index_select(1, torch.LongTensor([0]).cuda()) / (0.2023))
+        gradient.index_copy_(1, torch.LongTensor([1]).cuda(), \
+                                gradient.index_select(1, torch.LongTensor([1]).cuda()) / (0.1994))
+        gradient.index_copy_(1, torch.LongTensor([2]).cuda(), \
+                                gradient.index_select(1, torch.LongTensor([2]).cuda()) / (0.2010))
+    return gradient
 
 class _MahalanobisLoss(nn.Module):
     def __init__(self):
