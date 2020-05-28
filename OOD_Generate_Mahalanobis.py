@@ -30,6 +30,7 @@ parser.add_argument('--batch_size', type=int, default=200,
 parser.add_argument('--test_noise', type=float, default=0.01,
                     metavar='eta', help='batch size for data loader')
 parser.add_argument('--data_path', default='./data', help='data path')
+parser.add_argument('--verbose', type=bool, default=True, help='verbosity')
 parser.add_argument('--gpu', type=int, default=0, help='gpu index')
 args = parser.parse_args()
 print(args)
@@ -96,6 +97,9 @@ class MahalanobisGenerator:
         """
         Memorizes sample stats for in_data
         """
+        if args.verbose:
+            print(">> Training on in-dataset ", self.in_data)
+
         self.sample_mean, self.precision = self._get_sample_stats()
 
     ### TESTING ###
@@ -107,6 +111,9 @@ class MahalanobisGenerator:
             out_data, self.batch_size, args.data_path)
 
         # test inliers
+        if args.verbose:
+            print(">> Testing on in-dataset ", self.in_data)
+
         for i in range(self.num_layers):
             M_in = self._get_Mahalanobis_score(in_test_loader, True, i, test_noise)
             M_in = np.asarray(M_in, dtype=np.float32)
@@ -117,6 +124,8 @@ class MahalanobisGenerator:
                     (Mahalanobis_in, M_in.reshape((M_in.shape[0], -1))), axis=1)
 
         # test outliers
+        if args.verbose:
+            print(">> Testing on out-dataset ", out_data)
         for i in range(self.num_layers):
             M_out = self._get_Mahalanobis_score(out_test_loader, False, i, test_noise)
             M_out = np.asarray(M_out, dtype=np.float32)
@@ -127,6 +136,9 @@ class MahalanobisGenerator:
                     (Mahalanobis_out, M_out.reshape((M_out.shape[0], -1))), axis=1)
 
         # save results
+        if args.verbose:
+            print(">> Writing results to ", self.save_path)
+
         Mahalanobis_in = np.asarray(Mahalanobis_in, dtype=np.float32)
         Mahalanobis_out = np.asarray(Mahalanobis_out, dtype=np.float32)
 
