@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+torch.nn.Module.dump_patches = True
 
 class BasicBlock(nn.Module):
     def __init__(self, in_planes, out_planes, dropRate=0.0):
