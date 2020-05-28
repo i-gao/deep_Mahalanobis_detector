@@ -115,14 +115,13 @@ def getNonTargetDataSet(data_type, batch_size):
         _, test_loader = getCIFAR100(
             batch_size=batch_size, TF=TRANSFORM, data_root='./data', num_workers=1)
     elif data_type == 'imagenet_resize':
-        './data' = os.path.expanduser(
-            os.path.join('./data', 'Imagenet_resize'))
-        testsetout = datasets.ImageFolder('./data', transform=TRANSFORM)
+        data_path = os.path.expanduser('./data/Imagenet_resize')
+        testsetout = datasets.ImageFolder(data_path, transform=TRANSFORM)
         test_loader = torch.utils.data.DataLoader(
             testsetout, batch_size=batch_size, shuffle=False, num_workers=1)
     elif data_type == 'lsun_resize':
-        './data' = os.path.expanduser(os.path.join('./data', 'LSUN_resize'))
-        testsetout = datasets.ImageFolder('./data', transform=TRANSFORM)
+        data_path = os.path.expanduser('./data/LSUN_resize')
+        testsetout = datasets.ImageFolder(data_path, transform=TRANSFORM)
         test_loader = torch.utils.data.DataLoader(
             testsetout, batch_size=batch_size, shuffle=False, num_workers=1)
     return test_loader
