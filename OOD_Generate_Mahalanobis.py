@@ -35,6 +35,8 @@ parser.add_argument('--gpu', type=int, default=0, help='gpu index')
 args = parser.parse_args()
 print(args)
 
+ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+
 ### MODIFYING ./output/ -> ./output/scores/ ####
 
 def main():
@@ -110,69 +112,53 @@ class MahalanobisGenerator:
         self.sample_mean, self.precision = self._get_sample_stats()
 
     ### TESTING ###
-    def test(self, out_data, adversarial, in_data=None, test_noise=args.test_noise):
+    def test(self, data, adversarial, test_noise=args.test_noise):
         """
         Computes Mahalanobis scores for test set in_data, out_data
         Args:
-        - out_data: name of out dataset
+        - data: name of out dataset
         - adversarial: boolean flag for if this is an adversarial input
-        - in_data: name of in dataset, default is the class's in dataset
+        - ood boolean flag for if this is not the in-dataset
         - test_noise: constant noise to add to test data to help separation
         """
-        if in_data is None:
-            in_data = self.in_data
-            in_test_loader = self.in_test_loader 
-        else:
-            _, in_test_loader = data_loader.getNonTargetDataSet(in_data, self.batch_size, args.data_path)
+        adversarial = data in ADVERSARIAL # an adversarial out
+        positive = data == self.in_data # true label in
 
-        # if not adversarial, using torch.DataLoader, so just load once
-        if not adversarial:
-            out_test_loader = data_loader.getNonTargetDataSet(out_data, self.batch_size, args.data_path)
+        if positive:
+            test_loader = self.in_test_loader 
+        elif not adversarial:
+            # if not adversarial, using torch.DataLoader, so just load once
+            test_loader = data_loader.getNonTargetDataSet(data, self.batch_size, args.data_path)
 
-        # test inliers
         if args.verbose:
-            print(">> Testing on in-dataset ", self.in_data)
+            print(">> Testing on dataset ", data)
 
+        Mahalanobis_scores = np.array([])
         for i in range(self.num_layers):
-            M_in = self._get_Mahalanobis_score(in_data, in_test_loader, i, test_noise)
-            M_in = np.asarray(M_in, dtype=np.float32)
-            if i == 0:
-                Mahalanobis_in = M_in.reshape((M_in.shape[0], -1))
-            else:
-                Mahalanobis_in = np.concatenate(
-                    (Mahalanobis_in, M_in.reshape((M_in.shape[0], -1))), axis=1)
-
-        # test outliers
-        if args.verbose:
-            print(">> Testing on out-dataset ", out_data)
-        for i in range(self.num_layers):
+            if args.verbose:
+                print(">> Layer  ", i)
             
             # if adversarial, using a list, and for some reason, need to load this continuously
             if adversarial:
-                out_test_loader = data_loader.getAdversarialDataSet(out_data, self.in_data, self.batch_size)
+                test_loader = data_loader.getAdversarialDataSet(data, self.in_data, self.batch_size)
             
-            M_out = self._get_Mahalanobis_score(out_data, out_test_loader, i, test_noise)
-            M_out = np.asarray(M_out, dtype=np.float32)
-            if i == 0:
-                Mahalanobis_out = M_out.reshape((M_out.shape[0], -1))
-            else:
-                Mahalanobis_out = np.concatenate(
-                    (Mahalanobis_out, M_out.reshape((M_out.shape[0], -1))), axis=1)
+            layer_scores = self._get_Mahalanobis_score(data, test_loader, i, test_noise)
+            layer_scores = np.expand_dims(layer_scores, axis=1) #N, -> Nx1
+            Mahalanobis_scores = np.hstack((Mahalanobis_scores, layer_scores)) if Mahalanobis_scores.size else layer_scores
+            print(Mahalanobis_scores.shape)
 
         # save results
         if args.verbose:
             print(">> Writing results to ", self.save_path)
+        
+        Mahalanobis_labels = np.ones(Mahalanobis_scores.shape[0]) if positive else np.zeros(Mahalanobis_scores.shape[0]) 
+        Mahalanobis_labels = np.expand_dims(Mahalanobis_labels, axis=1) #N, -> Nx1
 
-        Mahalanobis_in = np.asarray(Mahalanobis_in, dtype=np.float32)
-        Mahalanobis_out = np.asarray(Mahalanobis_out, dtype=np.float32)
-
-        Mahalanobis_data, Mahalanobis_labels = lib_generation.merge_and_generate_labels(
-            Mahalanobis_out, Mahalanobis_in)
-        Mahalanobis_data = np.concatenate(
-            (Mahalanobis_data, Mahalanobis_labels), axis=1)
+        Mahalanobis_data = np.hstack((Mahalanobis_scores, Mahalanobis_labels))
+        print(Mahalanobis_data.shape)
 
         file_name = os.path.join(self.save_path, 'Mahalanobis_%s_%s_%s.npy' % (
-            str(test_noise), self.in_data, out_data))
+            str(test_noise), self.in_data, data))
         np.save(file_name, Mahalanobis_data)
 
     ## HELPER FUNCTIONS ##
@@ -256,7 +242,7 @@ class MahalanobisGenerator:
         - magnitude: test time constant noise to add
 
         return: 
-        - Mahalanobis score from layer_index
+        - Mahalanobis score from layer_index of shape N x 1
         '''
         self.model.eval()
         Mahalanobis = []
@@ -317,7 +303,7 @@ class MahalanobisGenerator:
                 g.write("{}\n".format(noise_gaussian_score[i]))
         g.close()
 
-        return Mahalanobis
+        return np.asarray(Mahalanobis, dtype=np.float32)
 
 if __name__ == '__main__':
     main()
