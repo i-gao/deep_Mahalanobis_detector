@@ -92,30 +92,30 @@ def getCIFAR100(batch_size, TF, data_root='/tmp/public_dataset/pytorch', train=T
     return ds
 
 
-def getTargetDataSet(data_type, batch_size):
+def getTargetDataSet(data_type, batch_size, data_path='./data'):
     if data_type == 'cifar10':
         train_loader, test_loader = getCIFAR10(
-            batch_size=batch_size, TF=TRANSFORM, data_root='./data', num_workers=1)
+            batch_size=batch_size, TF=TRANSFORM, data_root=data_path, num_workers=1)
     elif data_type == 'cifar100':
         train_loader, test_loader = getCIFAR100(
-            batch_size=batch_size, TF=TRANSFORM, data_root='./data', num_workers=1)
+            batch_size=batch_size, TF=TRANSFORM, data_root=data_path, num_workers=1)
     elif data_type == 'svhn':
         train_loader, test_loader = getSVHN(
-            batch_size=batch_size, TF=TRANSFORM, data_root='./data', num_workers=1)
+            batch_size=batch_size, TF=TRANSFORM, data_root=data_path, num_workers=1)
 
     return train_loader, test_loader
 
 
-def getNonTargetDataSet(data_type, batch_size):
+def getNonTargetDataSet(data_type, batch_size, data_path='./data'):
     if data_type == 'cifar10':
         _, test_loader = getCIFAR10(
-            batch_size=batch_size, TF=TRANSFORM, data_root='./data', num_workers=1)
+            batch_size=batch_size, TF=TRANSFORM, data_root=data_path, num_workers=1)
     elif data_type == 'svhn':
         _, test_loader = getSVHN(
-            batch_size=batch_size, TF=TRANSFORM, data_root='./data', num_workers=1)
+            batch_size=batch_size, TF=TRANSFORM, data_root=data_path, num_workers=1)
     elif data_type == 'cifar100':
         _, test_loader = getCIFAR100(
-            batch_size=batch_size, TF=TRANSFORM, data_root='./data', num_workers=1)
+            batch_size=batch_size, TF=TRANSFORM, data_root=data_path, num_workers=1)
     elif data_type == 'imagenet_resize':
         data_path = os.path.expanduser('./data/Imagenet_resize')
         testsetout = datasets.ImageFolder(data_path, transform=TRANSFORM)

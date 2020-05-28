@@ -29,6 +29,7 @@ parser.add_argument('--batch_size', type=int, default=200,
                     metavar='N', help='batch size for data loader')
 parser.add_argument('--test_noise', type=float, default=0.01,
                     metavar='eta', help='batch size for data loader')
+parser.add_argument('--data_path', default='./data', help='data path')
 parser.add_argument('--gpu', type=int, default=0, help='gpu index')
 args = parser.parse_args()
 print(args)
@@ -75,7 +76,7 @@ class MahalanobisGenerator:
 
         # load training data
         self.train_loader, _ = data_loader.getTargetDataSet(
-            self.in_data, self.batch_size)
+            self.in_data, self.batch_size, args.data_path)
 
         # load model
         self.model = models.ResNet34(num_c=self.num_classes)
@@ -100,10 +101,10 @@ class MahalanobisGenerator:
     ### TESTING ###
     def test(self, out_data, in_data=None, test_noise=args.test_noise):
         in_test_loader = self.train_loader if in_data is None else data_loader.getNonTargetDataSet(
-            in_data, self.batch_size)
+            in_data, self.batch_size, args.data_path)
 
         out_test_loader = data_loader.getNonTargetDataSet(
-            out_data, self.batch_size)
+            out_data, self.batch_size, args.data_path)
 
         # test inliers
         for i in range(self.num_layers):
