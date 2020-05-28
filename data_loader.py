@@ -164,4 +164,4 @@ def getAdversarialDataSet(attack_type, data_type, batch_size, adv_path='./output
                      (data_type, data_type, attack_type)).cuda()
     label = torch.load(adv_path + '/resnet_%s/label_resnet_%s_%s.pth' %
                        (data_type, data_type, attack_type)).cuda()
-    return adv.split(batch_size), label.split(batch_size)
+    return zip(adv.split(batch_size), label.split(batch_size))

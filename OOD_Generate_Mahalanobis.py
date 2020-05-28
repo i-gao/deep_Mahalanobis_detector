@@ -118,9 +118,8 @@ class MahalanobisGenerator:
         else:
             _, in_test_loader = data_loader.getNonTargetDataSet(in_data, self.batch_size, args.data_path)
 
-        if adversarial:
-            out_test_loader, _ = data_loader.getAdversarialDataSet(out_data, self.in_data, self.batch_size)
-        else:
+        # if not adversarial, using torch.DataLoader, so just load once
+        if not adversarial:
             out_test_loader = data_loader.getNonTargetDataSet(out_data, self.batch_size, args.data_path)
 
         # test inliers
@@ -140,6 +139,11 @@ class MahalanobisGenerator:
         if args.verbose:
             print(">> Testing on out-dataset ", out_data)
         for i in range(self.num_layers):
+            
+            # if adversarial, using a list, and for some reason, need to load this continuously
+            if adversarial:
+                out_test_loader = data_loader.getAdversarialDataSet(out_data, self.in_data, self.batch_size)
+            
             M_out = self._get_Mahalanobis_score(out_data, out_test_loader, i, test_noise)
             M_out = np.asarray(M_out, dtype=np.float32)
             if i == 0:
@@ -252,7 +256,6 @@ class MahalanobisGenerator:
         
         temp_file_name = '%s/confidence_Ga%s_%s.txt'%(self.save_path, str(layer_index), test_name)            
         g = open(temp_file_name, 'w')
-        
         for data, target in test_loader:
             data, target = data.cuda(), target.cuda()
             data, target = Variable(data, requires_grad = True), Variable(target)
