@@ -93,7 +93,7 @@ def main():
 
 def applyAttack(attack, model, data_loader, num_classes):
     if args.verbose:
-        print("Applying attack ", attack, " on dataset ", args.dataset)
+        print(">> Applying attack ", attack, " on dataset ", args.dataset)
 
     ## SETUP ##
     model.eval()

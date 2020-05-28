@@ -54,7 +54,7 @@ def main():
 
     engine = MahalanobisGenerator(args.in_data, NET_PATH, SAVE_PATH)
     engine.train()
-    engine.test(args.out_data)
+    engine.test(args.out_data, (args.out_data == "fgsm"))
 
 
 class MahalanobisGenerator:
@@ -103,19 +103,32 @@ class MahalanobisGenerator:
         self.sample_mean, self.precision = self._get_sample_stats()
 
     ### TESTING ###
-    def test(self, out_data, in_data=None, test_noise=args.test_noise):
-        in_test_loader = self.in_test_loader if in_data is None else data_loader.getNonTargetDataSet(
-            in_data, self.batch_size, args.data_path)
+    def test(self, out_data, adversarial, in_data=None, test_noise=args.test_noise):
+        """
+        Computes Mahalanobis scores for test set in_data, out_data
+        Args:
+        - out_data: name of out dataset
+        - adversarial: boolean flag for if this is an adversarial input
+        - in_data: name of in dataset, default is the class's in dataset
+        - test_noise: constant noise to add to test data to help separation
+        """
+        if in_data is None:
+            in_data = self.in_data
+            in_test_loader = self.in_test_loader 
+        else:
+            _, in_test_loader = data_loader.getNonTargetDataSet(in_data, self.batch_size, args.data_path)
 
-        out_test_loader = data_loader.getNonTargetDataSet(
-            out_data, self.batch_size, args.data_path)
+        if adversarial:
+            out_test_loader, _ = data_loader.getAdversarialDataSet(out_data, self.in_data, self.batch_size)
+        else:
+            out_test_loader = data_loader.getNonTargetDataSet(out_data, self.batch_size, args.data_path)
 
         # test inliers
         if args.verbose:
             print(">> Testing on in-dataset ", self.in_data)
 
         for i in range(self.num_layers):
-            M_in = self._get_Mahalanobis_score(in_test_loader, True, i, test_noise)
+            M_in = self._get_Mahalanobis_score(in_data, in_test_loader, i, test_noise)
             M_in = np.asarray(M_in, dtype=np.float32)
             if i == 0:
                 Mahalanobis_in = M_in.reshape((M_in.shape[0], -1))
@@ -127,7 +140,7 @@ class MahalanobisGenerator:
         if args.verbose:
             print(">> Testing on out-dataset ", out_data)
         for i in range(self.num_layers):
-            M_out = self._get_Mahalanobis_score(out_test_loader, False, i, test_noise)
+            M_out = self._get_Mahalanobis_score(out_data, out_test_loader, i, test_noise)
             M_out = np.asarray(M_out, dtype=np.float32)
             if i == 0:
                 Mahalanobis_out = M_out.reshape((M_out.shape[0], -1))
@@ -223,11 +236,11 @@ class MahalanobisGenerator:
         
         return sample_mean, precision
 
-    def _get_Mahalanobis_score(self, test_loader, true_label_in, layer_index, magnitude):
+    def _get_Mahalanobis_score(self, test_name, test_loader, layer_index, magnitude):
         '''
         Computes Mahalanobis scores for layer @ layer_index
+        - test_name: name of test dataset
         - test_loader: test data to compute scores for
-        - true_label_in: flag for whether the true value is in or out
         - layer_index: layer to compute scores over
         - magnitude: test time constant noise to add
 
@@ -237,8 +250,7 @@ class MahalanobisGenerator:
         self.model.eval()
         Mahalanobis = []
         
-        label = "In" if true_label_in else "In"
-        temp_file_name = '%s/confidence_Ga%s_%s.txt'%(self.save_path, str(layer_index), label)            
+        temp_file_name = '%s/confidence_Ga%s_%s.txt'%(self.save_path, str(layer_index), test_name)            
         g = open(temp_file_name, 'w')
         
         for data, target in test_loader:
