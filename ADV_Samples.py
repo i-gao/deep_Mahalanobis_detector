@@ -122,18 +122,17 @@ def applyAttack(attack, model, data_loader, num_classes):
         equal_flag = pred.eq(target.data).cpu()
         correct += equal_flag.sum()
 
-        with torch.no_grad():
-            noisy_data = torch.add(data.data, random_noise_size, torch.randn(data.size()).cuda()) 
-            noisy_data = torch.clamp(noisy_data, MIN_PIXEL, MAX_PIXEL)
+        noisy_data = torch.add(data.data, random_noise_size, torch.randn(data.size()).cuda()) 
+        noisy_data = torch.clamp(noisy_data, MIN_PIXEL, MAX_PIXEL)
 
-            if total == 0:
-                clean_data_tot = data.clone().data.cpu()
-                label_tot = target.clone().data.cpu()
-                noisy_data_tot = noisy_data.clone().cpu()
-            else:
-                clean_data_tot = torch.cat((clean_data_tot, data.clone().data.cpu()),0)
-                label_tot = torch.cat((label_tot, target.clone().data.cpu()), 0)
-                noisy_data_tot = torch.cat((noisy_data_tot, noisy_data.clone().cpu()),0)
+        if total == 0:
+            clean_data_tot = data.clone().data.cpu()
+            label_tot = target.clone().data.cpu()
+            noisy_data_tot = noisy_data.clone().cpu()
+        else:
+            clean_data_tot = torch.cat((clean_data_tot, data.clone().data.cpu()),0)
+            label_tot = torch.cat((label_tot, target.clone().data.cpu()), 0)
+            noisy_data_tot = torch.cat((noisy_data_tot, noisy_data.clone().cpu()),0)
             
         # generate adversarial
         model.zero_grad()
@@ -146,7 +145,7 @@ def applyAttack(attack, model, data_loader, num_classes):
             gradient = adversary.fgsm(inputs)
             adv_data = torch.add(inputs.data, adv_noise, gradient)
         elif attack == 'bim': 
-            gradient = adversary.bim(inputs, target, model, criterion, adv_noise) 
+            gradient = adversary.bim(inputs, target, model, criterion, adv_noise, MIN_PIXEL, MAX_PIXEL) 
             adv_data = torch.add(inputs.data, adv_noise, gradient)
         if attack == 'deepfool':
             _, adv_data = adversary.deepfool(model, data.data.clone(), target.data.cpu(), \

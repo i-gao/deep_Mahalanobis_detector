@@ -236,6 +236,7 @@ def deepfool(model, input, target, n_classes, train_mode=False, max_iter=5,
     status = torch.zeros(input.size(0)).long()
     r = torch.zeros(input.size())
     for i in range(input.size(0)):
+        print(input[i].shape)
         status[i], r[i] = deepfool_single(
             model, input[i], target[i], n_classes, train_mode,
             max_iter, step_size, batch_size, labels)
@@ -406,7 +407,7 @@ def fgsm(inputs):
                             gradient.index_select(1, torch.LongTensor([2]).cuda()) / (0.2010))
     return gradient
 
-def bim(inputs, target, model, criterion, adv_noise):
+def bim(inputs, target, model, criterion, adv_noise, min, max):
     """ 
     gradient adjustments for bim
     moved from ADV_sample.py
@@ -414,7 +415,7 @@ def bim(inputs, target, model, criterion, adv_noise):
     gradient = torch.sign(inputs.grad.data)
     for k in range(5):
         inputs = torch.add(inputs.data, adv_noise, gradient)
-        inputs = torch.clamp(inputs, MIN_PIXEL, MAX_PIXEL)
+        inputs = torch.clamp(inputs, min, max)
         inputs = Variable(inputs, requires_grad=True)
         output = model(inputs)
         loss = criterion(output, target)

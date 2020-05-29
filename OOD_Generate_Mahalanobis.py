@@ -35,7 +35,8 @@ parser.add_argument('--gpu', type=int, default=0, help='gpu index')
 args = parser.parse_args()
 print(args)
 
-ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+# ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+ADVERSARIAL = ["fgsm", "bim"]
 
 ### MODIFYING ./output/ -> ./output/scores/ ####
 
