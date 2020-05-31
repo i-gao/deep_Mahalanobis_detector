@@ -118,8 +118,8 @@ class MahalanobisEvaluator:
         plt.figure()
         plt.bar(np.arange(scores.shape[1]), self.auroc[out_data])        
         plt.title("In: {} Out: {}".format(self.in_data, out_data))
-        plt.ylabel("Layer Index")
-        plt.xlabel("AUROC")
+        plt.xlabel("Layer Index")
+        plt.ylabel("AUROC")
         plt.savefig(self.save_path + 'bar_{}_{}_{}.png'.format(self.test_noise, self.in_data, out_data))
 
 if __name__ == '__main__':
