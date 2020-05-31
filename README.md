@@ -16,16 +16,7 @@ Weights must be downloaded and placed in `./pre_trained/`:
 
 * [ResNet on CIFAR-10](https://www.dropbox.com/s/ynidbn7n7ccadog/resnet_cifar10.pth?dl=0) / [ResNet on CIFAR-100](https://www.dropbox.com/s/yzfzf4bwqe4du6w/resnet_cifar100.pth?dl=0) / [ResNet on SVHN](https://www.dropbox.com/s/uvgpgy9pu7s9ps2/resnet_svhn.pth?dl=0)
 
-# Suggest Workflow
-
-```
-# model: ResNet, in-distribution: CIFAR-10, gpu: 0
-python OOD_Baseline_and_ODIN.py --dataset cifar10 --net_type resnet --gpu 0
-```
-
-## Detecting Out-of-Distribution Samples (Mahalanobis detector)
-
-### 1. Extract detection characteristics:
+# Suggested Workflow
 ```
 ### model: ResNet, in-distribution: CIFAR-10, gpu: 0  ###
 
