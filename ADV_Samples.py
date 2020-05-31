@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', required=True,
                     help='cifar10 | cifar100 | svhn')
 parser.add_argument('--attack', required=True,
-                    help='fgsm | deepfool | bim | cwl2')
+                    help='all | fgsm | bim')
 parser.add_argument('--batch_size', type=int, default=200,
                     metavar='N', help='batch size for data loader')
 parser.add_argument('--data_path', default='./data', help='data path')
@@ -35,6 +35,9 @@ NET_PATH = './pre_trained/resnet_' + args.dataset + '.pth'
 SAVE_PATH = './output/adversarial/resnet_' + args.dataset + '/'
 if not os.path.isdir(SAVE_PATH):
     os.mkdir(SAVE_PATH)
+
+# ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+ADVERSARIAL = ["fgsm", "bim"]
 
 ADV_NOISE = {
     'fgsm': 0.05,
@@ -89,7 +92,10 @@ def main():
     model.cuda()
 
     # apply attack
-    applyAttack(args.attack, model, loader, num_classes)
+    if args.attack == "all":
+        for attack in ADVERSARIAL: applyAttack(attack, model, loader, num_classes)
+    else:
+        applyAttack(args.attack, model, loader, num_classes)
 
 def applyAttack(attack, model, data_loader, num_classes):
     if args.verbose:
