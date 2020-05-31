@@ -97,7 +97,7 @@ class MahalanobisRegression:
         - val_data: validation out_dataset to train logreg on
         """
         if args.verbose:
-            print("Training logistic regression on in_data" + self.in_data + "with out set" + val_data)
+            print(">> Training logistic regression on in_data " + self.in_data + " with out set " + val_data)
         
         val_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, val_data))
         scores = np.vstack((self.in_file[:, :-1], val_file[:, :-1]))
@@ -119,6 +119,9 @@ class MahalanobisRegression:
         """
         if self.model is None:
             raise Exception("The model has not been trained. Run train().")
+
+        if args.verbose:
+            print(">> Evaluating trained ensemble on out-dataset " + out_data)
 
         out_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, out_data))
         scores = np.vstack((self.in_file[:, :-1], out_file[:, :-1]))
