@@ -24,11 +24,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--in_data', required=True,
                     help='cifar10 | cifar100 | svhn')
 parser.add_argument('--out_data', required=True,
-                    help='all | svhn | imagenet_resize | lsun_resize | fgsm | deepfool | bim | cwl2')
+                    help='all | svhn | imagenet_resize | lsun_resize | fgsm | bim')
 parser.add_argument('--batch_size', type=int, default=200,
                     metavar='N', help='batch size for data loader')
 parser.add_argument('--test_noise', type=float, default=0.01,
-                    metavar='eta', help='batch size for data loader')
+                    metavar='eta', help='noise magnitude added to test inputs')
 parser.add_argument('--data_path', default='./data', help='data path')
 parser.add_argument('--verbose', type=bool, default=True, help='verbosity')
 parser.add_argument('--gpu', type=int, default=0, help='gpu index')
@@ -61,10 +61,10 @@ def main():
     if args.out_data == "all":
         for out_data in ["svhn", "imagenet_resize", "lsun_resize"]:
             engine.test(out_data, False)
-        for out_data in ["fgsm", "deepfool", "bim", "cwl2"]:
+        for out_data in ADVERSARIAL:
             engine.test(out_data, True)
     else:
-        engine.test(args.out_data, args.out_data in ["fgsm", "deepfool", "bim", "cwl2"])
+        engine.test(args.out_data, args.out_data in ADVERSARIAL)
 
 
 class MahalanobisGenerator:
@@ -146,20 +146,20 @@ class MahalanobisGenerator:
             layer_scores = self._get_Mahalanobis_score(data, test_loader, i, test_noise)
             layer_scores = np.expand_dims(layer_scores, axis=1) #N, -> Nx1
             Mahalanobis_scores = np.hstack((Mahalanobis_scores, layer_scores)) if Mahalanobis_scores.size else layer_scores
-            print(Mahalanobis_scores.shape)
+            # print(Mahalanobis_scores.shape)
 
-        # save results
-        if args.verbose:
-            print(">> Writing results to ", self.save_path)
-        
+        # save results        
         Mahalanobis_labels = np.ones(Mahalanobis_scores.shape[0]) if positive else np.zeros(Mahalanobis_scores.shape[0]) 
         Mahalanobis_labels = np.expand_dims(Mahalanobis_labels, axis=1) #N, -> Nx1
 
         Mahalanobis_data = np.hstack((Mahalanobis_scores, Mahalanobis_labels))
-        print(Mahalanobis_data.shape)
 
         file_name = os.path.join(self.save_path, 'Mahalanobis_%s_%s_%s.npy' % (
             str(test_noise), self.in_data, data))
+
+        if args.verbose:
+            print(">> Writing cumulative results to ", file_name)
+        
         np.save(file_name, Mahalanobis_data)
 
     ## HELPER FUNCTIONS ##
@@ -244,6 +244,7 @@ class MahalanobisGenerator:
 
         return: 
         - Mahalanobis score from layer_index of shape N x 1
+        - writes scores to layer's own txt file, same as returned Mahalanobis score
         '''
         self.model.eval()
         Mahalanobis = []
@@ -298,10 +299,10 @@ class MahalanobisGenerator:
                     noise_gaussian_score = torch.cat((noise_gaussian_score, term_gau.view(-1,1)), 1)      
 
             noise_gaussian_score, _ = torch.max(noise_gaussian_score, dim=1)
-            Mahalanobis.extend(noise_gaussian_score.cpu().numpy())
+            Mahalanobis.extend(noise_gaussian_score.cpu().numpy()) # a long list of all scores
             
-            for i in range(data.size(0)):
-                g.write("{}\n".format(noise_gaussian_score[i]))
+            for i in range(data.size(0)): # each feature's score is written on a new line
+                g.write("{}\n".format(noise_gaussian_score[i])) 
         g.close()
 
         return np.asarray(Mahalanobis, dtype=np.float32)
