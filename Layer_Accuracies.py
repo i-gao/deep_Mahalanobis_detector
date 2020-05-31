@@ -102,7 +102,7 @@ class MahalanobisEvaluator:
             fpr, tpr, _ = metrics.roc_curve(y, scores[:,i], pos_label=1)
             tnr = 1-fpr
 
-            plt.figure()
+            plt.new()
             plt.plot(PLOT_X, -PLOT_X+1)
             plt.plot(tnr, tpr)
             plt.title("In: {} Out: {} Layer: {}".format(self.in_data, out_data, i))
