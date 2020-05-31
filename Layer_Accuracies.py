@@ -120,7 +120,7 @@ class MahalanobisEvaluator:
         plt.title("In: {} Out: {}".format(self.in_data, out_data))
         plt.ylabel("Layer Index")
         plt.xlabel("AUROC")
-        plt.savefig(self.save_path + 'roc_{}_{}_{}_{}.png'.format(self.test_noise, self.in_data, out_data, i))
+        plt.savefig(self.save_path + 'bar_{}_{}_{}.png'.format(self.test_noise, self.in_data, out_data))
 
 if __name__ == '__main__':
     main()

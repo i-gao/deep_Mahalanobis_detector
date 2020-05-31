@@ -66,6 +66,8 @@ def main():
     else:
         engine.test(args.out_data, args.out_data in ADVERSARIAL)
 
+    engine.test(in_data, False)
+
 
 class MahalanobisGenerator:
     """
