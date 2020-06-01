@@ -13,7 +13,6 @@ import data_loader
 import numpy as np
 import models
 import os
-import lib_generation
 import sklearn.covariance
 
 from torch.autograd import Variable
@@ -35,8 +34,8 @@ parser.add_argument('--gpu', type=int, default=0, help='gpu index')
 args = parser.parse_args()
 print(args)
 
-# ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
-ADVERSARIAL = ["fgsm", "bim"]
+ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+# ADVERSARIAL = ["fgsm", "bim"]
 
 ### MODIFYING ./output/ -> ./output/scores/ ####
 
@@ -66,7 +65,7 @@ def main():
     else:
         engine.test(args.out_data, args.out_data in ADVERSARIAL)
 
-    engine.test(in_data, False)
+    engine.test(args.in_data, False)
 
 
 class MahalanobisGenerator:

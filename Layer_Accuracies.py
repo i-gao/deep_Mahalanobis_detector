@@ -24,8 +24,8 @@ parser.add_argument('--verbose', type=bool, default=True, help='verbosity')
 args = parser.parse_args()
 print(args)
 
-# ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
-ADVERSARIAL = ["fgsm", "bim"]
+ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+# ADVERSARIAL = ["fgsm", "bim"]
 PLOT_X = np.linspace(0, 1, 100)
 
 def main():
@@ -102,7 +102,7 @@ class MahalanobisEvaluator:
             fpr, tpr, _ = metrics.roc_curve(y, scores[:,i], pos_label=1)
             tnr = 1-fpr
 
-            plt.new()
+            plt.figure()
             plt.plot(PLOT_X, -PLOT_X+1)
             plt.plot(tnr, tpr)
             plt.title("In: {} Out: {} Layer: {}".format(self.in_data, out_data, i))
