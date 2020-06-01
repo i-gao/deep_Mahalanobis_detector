@@ -135,10 +135,10 @@ class MahalanobisRegression:
         plt.figure()
         plt.plot(PLOT_X, -PLOT_X+1)
         plt.plot(tnr, tpr)
-        plt.title("In: {} Out: {} Ensemble".format(self.in_data, out_data))
+        plt.title("In: {} Out: {} Train: {} Ensemble".format(self.in_data, self.val_data, out_data))
         plt.ylabel("TPR")
         plt.xlabel("TNR")
-        plt.savefig(self.save_path + 'roc_{}_{}_{}_ensemble.png'.format(self.test_noise, self.in_data, out_data))
+        plt.savefig(self.save_path + 'roc_{}_{}_{}_{}_ensemble.png'.format(self.test_noise, self.in_data, self.val_data, out_data))
 
         tpr95_pos_idx = np.abs(tpr - .95).argmin()
         self.tnr_at_tpr95[out_data] = tnr[tpr95_pos_idx]
