@@ -135,7 +135,7 @@ class MahalanobisRegression:
         plt.figure()
         plt.plot(PLOT_X, -PLOT_X+1)
         plt.plot(tnr, tpr)
-        plt.title("In: {} Out: {} Train: {} Ensemble".format(self.in_data, self.val_data, out_data))
+        plt.title("In: {} Out: {} Train: {} Ensemble".format(self.in_data, out_data, self.val_data))
         plt.ylabel("TPR")
         plt.xlabel("TNR")
         plt.savefig(self.save_path + 'roc_{}_{}_{}_{}_ensemble.png'.format(self.test_noise, self.in_data, self.val_data, out_data))
