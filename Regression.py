@@ -27,8 +27,8 @@ parser.add_argument('--verbose', type=bool, default=True, help='verbosity')
 args = parser.parse_args()
 print(args)
 
-# ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
-ADVERSARIAL = ["fgsm", "bim"]
+ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+# ADVERSARIAL = ["fgsm", "bim"]
 PLOT_X = np.linspace(0, 1, 100)
 
 def main():

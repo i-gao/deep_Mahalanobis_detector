@@ -36,8 +36,8 @@ SAVE_PATH = './output/adversarial/resnet_' + args.dataset + '/'
 if not os.path.isdir(SAVE_PATH):
     os.mkdir(SAVE_PATH)
 
-# ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
-ADVERSARIAL = ["fgsm", "bim"]
+ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+# ADVERSARIAL = ["fgsm", "bim"]
 
 ADV_NOISE = {
     'fgsm': 0.05,
@@ -155,7 +155,7 @@ def applyAttack(attack, model, data_loader, num_classes):
             adv_data = torch.add(inputs.data, adv_noise, gradient)
         if attack == 'deepfool':
             _, adv_data = adversary.deepfool(model, data.data.clone(), target.data.cpu(), \
-                                             num_classes, step_size=adv_noise, train_mode=False)
+                                             num_classes, step_size=adv_noise[args.dataset], train_mode=False)
             adv_data = adv_data.cuda()
         elif attack == 'cwl2':
             _, adv_data = adversary.cw(model, data.data.clone(), target.data.cpu(), 1.0, 'l2', crop_frac=1.0)

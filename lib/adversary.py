@@ -204,7 +204,7 @@ def deepfool_single(model, imgs, target, n_classes, train_mode, max_iter=50,
         min_w = w[min_idx[0]]
         min_norm = w_norm[min_idx[0]].data
         min_ratio = min_ratio[0]
-        min_norm = min_norm[0]
+        min_norm = min_norm.item()
         ri = min_ratio / min_norm * step_size * min_w
         imgs_var2 = imgs_var2.add(ri)
         r = r.add(ri.data)
@@ -212,9 +212,9 @@ def deepfool_single(model, imgs, target, n_classes, train_mode, max_iter=50,
                                                 imgs_var2.size(1), imgs_var2.size(2))
         output2 = model.forward(imgs_var_in).clone()
         _, pred2 = output2.data.cpu().max(1)
-        pred2 = pred2.squeeze()[0]
+        pred2 = pred2.squeeze().item()
         diff = torch.norm(imgs_var - imgs_var2) / torch.norm(imgs_var)
-        diff = diff.data[0]
+        diff = diff.data.item()
         if verbose:
             print('iteration ' + str(m + 1) +
                   ': perturbation norm ratio = ' + str(diff))
@@ -236,7 +236,7 @@ def deepfool(model, input, target, n_classes, train_mode=False, max_iter=5,
     status = torch.zeros(input.size(0)).long()
     r = torch.zeros(input.size())
     for i in range(input.size(0)):
-        print(input[i].shape)
+        #print(input[i].shape)
         status[i], r[i] = deepfool_single(
             model, input[i], target[i], n_classes, train_mode,
             max_iter, step_size, batch_size, labels)
@@ -314,7 +314,7 @@ def cw(model, input, target, weight, loss_str, bound=0, tv_weight=0,
             loss = torch.clamp((w - input_var).abs() - bound, min=0).sum()
         else:
             raise ValueError('Unsupported loss: %s' % loss_str)
-        recons_loss = loss.data[0]
+        recons_loss = loss.data.item()
         w_data = w.data
         if crop_frac < 1 and i % 3 == 1:
             w_cropped = torch.zeros(
@@ -340,7 +340,7 @@ def cw(model, input, target, weight, loss_str, bound=0, tv_weight=0,
         for j in range(output.size(0)):
             loss += weight * torch.clamp(
                 output[j][target[j]] - output[j][argmax[j]] + kappa, min=0)
-        adv_loss = loss.data[0] - recons_loss
+        adv_loss = loss.data.item() - recons_loss
         if is_gpu:
             loss = loss.cuda()
         loss.backward()
@@ -370,7 +370,7 @@ def cw(model, input, target, weight, loss_str, bound=0, tv_weight=0,
                         minimize_tv.tv_dx(w_cpu[j, k] - input_np[j, k], p))
                     w.grad.data[j, k].add_(grad.float())
         optimizer.step()
-        total_loss = loss.data.cpu()[0] + tv_loss
+        total_loss = loss.data.cpu().item() + tv_loss
         # w.data = utils.img_to_tensor(utils.transform_img(w.data), scale=False)
         output_vec = w.data
         preds = util.get_labels(model, output_vec)
