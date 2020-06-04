@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--in_data', required=True,
                     help='cifar10 | cifar100 | svhn')
 parser.add_argument('--train_data', required=True,
-                    help='out_dataset to train logreg on')
+                    help='out_dataset to train logreg on | adversarial | out')
 parser.add_argument('--out_data', required=True,
                     help='all | svhn | imagenet_resize | lsun_resize | fgsm | bim')
 parser.add_argument('--test_noise', type=float, default=0.01,
@@ -45,7 +45,13 @@ def main():
         os.mkdir(SAVE_PATH)
 
     engine = MahalanobisRegression(args.in_data, SAVE_PATH)
-    engine.train(args.train_data)
+
+    if args.val_data == "adversarial":
+        engine.train(*ADVERSARIAL)
+    elif args.val_data == "out":
+        engine.train("svhn", "imagenet_resize", "lsun_resize")
+    else:
+        engine.train(args.val_data)
 
     if args.out_data == "all":
         for out_data in ["svhn", "imagenet_resize", "lsun_resize"]:
@@ -92,20 +98,25 @@ class MahalanobisRegression:
         self.tnr_at_tpr95 = {}
         self.auroc = {}
 
-    def train(self, val_data):
+    def train(self, *val_data):
         """
         Trains a logistic regression to find weights used to combine layers for a simple
         threshold based detector.
         Args:
         - val_data: validation out_dataset to train logreg on
+            if more than one arg provided, unions the datasets
         """
         if args.verbose:
             print(">> Training logistic regression on in_data " + self.in_data + " with out set " + val_data)
-        
-        val_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, val_data))
-        scores = np.vstack((self.in_file[:, :-1], val_file[:, :-1]))
-        y = np.concatenate((self.in_file[:, -1], val_file[:, -1]))
 
+        # load out_data and union if necessary
+        scores = self.in_file[:, :-1]
+        y = self.in_file[:, -1]
+        for data in val_data:
+            val_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, data))
+            scores = np.vstack((scores, val_file[:, :-1]))
+            y = np.concatenate((y, val_file[:, -1]))
+        
         self.model = LogisticRegressionCV(n_jobs=-1).fit(scores, y)
         self.val_data = val_data
 
