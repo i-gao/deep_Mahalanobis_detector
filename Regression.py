@@ -46,12 +46,12 @@ def main():
 
     engine = MahalanobisRegression(args.in_data, SAVE_PATH)
 
-    if args.val_data == "adversarial":
+    if args.train_data == "adversarial":
         engine.train(*ADVERSARIAL)
-    elif args.val_data == "out":
+    elif args.train_data == "out":
         engine.train("svhn", "imagenet_resize", "lsun_resize")
     else:
-        engine.train(args.val_data)
+        engine.train(args.train_data)
 
     if args.out_data == "all":
         for out_data in ["svhn", "imagenet_resize", "lsun_resize"]:
