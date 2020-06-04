@@ -107,7 +107,7 @@ class MahalanobisRegression:
             if more than one arg provided, unions the datasets
         """
         if args.verbose:
-            print(">> Training logistic regression on in_data " + self.in_data + " with out set " + val_data)
+            print(">> Training logistic regression on in_data " + self.in_data + " with out set " + str(val_data))
 
         # load out_data and union if necessary
         scores = self.in_file[:, :-1]
@@ -136,7 +136,7 @@ class MahalanobisRegression:
             raise Exception("The model has not been trained. Run train().")
 
         if args.verbose:
-            print(">> Evaluating trained ensemble on out-dataset " + out_data)
+            print(">> Evaluating trained ensemble on out-dataset " + str(out_data))
 
         # load out_data and union if necessary
         scores = self.in_file[:, :-1]
