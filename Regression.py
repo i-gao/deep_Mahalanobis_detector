@@ -52,6 +52,9 @@ def main():
             engine.eval(out_data)
         for out_data in ADVERSARIAL:
             engine.eval(out_data)
+        
+        engine.eval(*ADVERSARIAL)
+        engine.eval("svhn", "imagenet_resize", "lsun_resize", *ADVERSARIAL)
     else:
         engine.eval(args.out_data)
 
@@ -106,12 +109,13 @@ class MahalanobisRegression:
         self.model = LogisticRegressionCV(n_jobs=-1).fit(scores, y)
         self.val_data = val_data
 
-    def eval(self, out_data):
+    def eval(self, *out_data):
         """
         Computes TNR @ TPR95, AUROC for scores generated on the (in_data, out_data) pair
         by training a logistic regression ensemble using val_data.
         Args:
         - out_data: name of out_dataset to evaluate regression on
+            if more than one arg provided, unions the datasets
         Output:
         - saves ROC curves fo in save_path with format roc_TESTNOISE_INDATA_OUTDATA_LAYERINDEX
         - saves TNR @ TPR95, AUROC scores in class variables for later use
@@ -123,9 +127,13 @@ class MahalanobisRegression:
         if args.verbose:
             print(">> Evaluating trained ensemble on out-dataset " + out_data)
 
-        out_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, out_data))
-        scores = np.vstack((self.in_file[:, :-1], out_file[:, :-1]))
-        y = np.concatenate((self.in_file[:, -1], out_file[:, -1]))
+        # load out_data and union if necessary
+        scores = self.in_file[:, :-1]
+        y = self.in_file[:, -1]
+        for data in out_data:
+            out_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, data))
+            scores = np.vstack((scores, out_file[:, :-1]))
+            y = np.concatenate((y, out_file[:, -1]))
 
         # run model on out_data
         y_pred = self.model.predict_proba(scores)[:, 1]
