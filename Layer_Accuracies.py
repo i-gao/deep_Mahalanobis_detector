@@ -25,6 +25,7 @@ args = parser.parse_args()
 print(args)
 
 ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+OUT = ["svhn", "cifar10", "cifar100", "imagenet_resize", "lsun_resize"]
 # ADVERSARIAL = ["fgsm", "bim"]
 PLOT_X = np.linspace(0, 1, 100)
 
@@ -44,7 +45,7 @@ def main():
     engine = MahalanobisEvaluator(args.in_data, SAVE_PATH)
 
     if args.out_data == "all":
-        for out_data in ["svhn", "imagenet_resize", "lsun_resize"]:
+        for out_data in OUT:
             engine.eval(out_data)
         for out_data in ADVERSARIAL:
             engine.eval(out_data)
@@ -91,6 +92,10 @@ class MahalanobisEvaluator:
         - saves TNR @ TPR95, AUROC scores in class variables for later use
         - saves bar graph that shows auroc varying with layer index in save_path with format bar_TESTNOISE_INDATA_OUTDATA
         """
+        if out_data == self.in_data:
+            print("Cannot evaluate on in-dataset.")
+            return
+
         out_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, out_data))
         scores = np.vstack((self.in_file[:, :-1], out_file[:, :-1]))
         y = np.concatenate((self.in_file[:, -1], out_file[:, -1]))

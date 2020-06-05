@@ -28,6 +28,7 @@ args = parser.parse_args()
 print(args)
 
 ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
+OUT = ["svhn", "cifar10", "cifar100", "imagenet_resize", "lsun_resize"]
 # ADVERSARIAL = ["fgsm", "bim"]
 PLOT_X = np.linspace(0, 1, 100)
 
@@ -49,18 +50,18 @@ def main():
     if args.train_data == "adversarial":
         engine.train(*ADVERSARIAL)
     elif args.train_data == "out":
-        engine.train("svhn", "imagenet_resize", "lsun_resize")
+        engine.train(*OUT)
     else:
         engine.train(args.train_data)
 
     if args.out_data == "all":
-        for out_data in ["svhn", "imagenet_resize", "lsun_resize"]:
+        for out_data in OUT:
             engine.eval(out_data)
         for out_data in ADVERSARIAL:
             engine.eval(out_data)
         
         engine.eval(*ADVERSARIAL)
-        engine.eval("svhn", "imagenet_resize", "lsun_resize", *ADVERSARIAL)
+        engine.eval(*OUT, *ADVERSARIAL)
     else:
         engine.eval(args.out_data)
 
@@ -113,6 +114,7 @@ class MahalanobisRegression:
         scores = self.in_file[:, :-1]
         y = self.in_file[:, -1]
         for data in val_data:
+            if data == self.in_data: continue
             val_file = np.load(self.load_path + 'Mahalanobis_{}_{}_{}.npy'.format(self.test_noise, self.in_data, data))
             scores = np.vstack((scores, val_file[:, :-1]))
             y = np.concatenate((y, val_file[:, -1]))
@@ -134,6 +136,10 @@ class MahalanobisRegression:
         """
         if self.model is None:
             raise Exception("The model has not been trained. Run train().")
+
+        if self.in_data in out_data:
+            print("Cannot evaluate on in-dataset.")
+            return
 
         if args.verbose:
             print(">> Evaluating trained ensemble on out-dataset " + str(out_data))

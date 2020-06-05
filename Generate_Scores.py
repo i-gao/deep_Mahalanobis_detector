@@ -36,6 +36,7 @@ print(args)
 
 ADVERSARIAL = ["fgsm", "deepfool", "bim", "cwl2"]
 # ADVERSARIAL = ["fgsm", "bim"]
+OUT = ["svhn", "cifar10", "cifar100", "imagenet_resize", "lsun_resize"]
 
 ### MODIFYING ./output/ -> ./output/scores/ ####
 
@@ -58,14 +59,13 @@ def main():
     engine.train()
 
     if args.out_data == "all":
-        for out_data in ["svhn", "imagenet_resize", "lsun_resize"]:
+        for out_data in OUT:
             engine.test(out_data, False)
         for out_data in ADVERSARIAL:
             engine.test(out_data, True)
     else:
         engine.test(args.out_data, args.out_data in ADVERSARIAL)
-
-    engine.test(args.in_data, False)
+        engine.test(args.in_data, False)
 
 
 class MahalanobisGenerator:
