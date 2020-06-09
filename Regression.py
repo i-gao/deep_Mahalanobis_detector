@@ -142,8 +142,9 @@ class MahalanobisRegression:
             raise Exception("The model has not been trained. Run train().")
 
         if self.in_data in out_data:
-            print("Cannot evaluate on in-dataset.")
-            return
+            out_data = list(out_data)
+            out_data.remove(self.in_data)
+            out_data = tuple(out_data)
 
         if args.verbose:
             print(">> Evaluating trained ensemble on out-dataset " + str(out_data))
