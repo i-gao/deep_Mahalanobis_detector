@@ -51,6 +51,9 @@ def main():
         engine.train(*ADVERSARIAL)
     elif args.train_data == "out":
         engine.train(*OUT)
+    elif args.train_data == "adversarial-ind":
+        for a in ADVERSARIAL:
+            engine.train(a)
     else:
         engine.train(args.train_data)
 
@@ -61,6 +64,7 @@ def main():
             engine.eval(out_data)
         
         engine.eval(*ADVERSARIAL)
+        engine.eval(*OUT)
         engine.eval(*OUT, *ADVERSARIAL)
     else:
         engine.eval(args.out_data)
