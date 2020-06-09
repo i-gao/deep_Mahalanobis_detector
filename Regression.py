@@ -69,7 +69,7 @@ def main():
     else:
         engine.eval(args.out_data)
 
-    print(engine.tnr_at_tpr95)
+    print(engine.tnr_at_tpr90)
     print(engine.auroc)
 
 class MahalanobisRegression:
@@ -100,7 +100,7 @@ class MahalanobisRegression:
         self.val_data = None # out set that the model was trained on
 
         # return values
-        self.tnr_at_tpr95 = {}
+        self.tnr_at_tpr90 = {}
         self.auroc = {}
 
     def train(self, *val_data):
@@ -169,12 +169,12 @@ class MahalanobisRegression:
         plt.xlabel("TNR")
         plt.savefig(self.save_path + 'roc_{}_{}_{}_{}_ensemble.png'.format(self.test_noise, self.in_data, self.val_data, out_data))
 
-        tpr95_pos_idx = np.abs(tpr - .95).argmin()
-        self.tnr_at_tpr95[out_data] = tnr[tpr95_pos_idx]
+        tpr90_pos_idx = np.abs(tpr - .90).argmin()
+        self.tnr_at_tpr95[out_data] = tnr[tpr90_pos_idx]
         self.auroc[out_data] = metrics.roc_auc_score(y, y_pred)
 
         if args.verbose:
-            print("TNR @ TPR95:", self.tnr_at_tpr95[out_data])
+            print("TNR @ TPR90:", self.tnr_at_tpr90[out_data])
             print("AUROC: ", self.auroc[out_data])
 
 if __name__ == '__main__':
