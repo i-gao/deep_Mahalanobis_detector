@@ -58,10 +58,10 @@ def main():
         engine.train(args.train_data)
 
     if args.out_data == "all":
-        for out_data in OUT:
-            engine.eval(out_data)
-        for out_data in ADVERSARIAL:
-            engine.eval(out_data)
+        # for out_data in OUT:
+        #     engine.eval(out_data)
+        # for out_data in ADVERSARIAL:
+        #     engine.eval(out_data)
         
         engine.eval(*ADVERSARIAL)
         engine.eval(*OUT)
@@ -146,6 +146,10 @@ class MahalanobisRegression:
             out_data.remove(self.in_data)
             out_data = tuple(out_data)
 
+        if out_data == ():
+            print(">> Cannot evaluate on in_dataset.")
+            return
+
         if args.verbose:
             print(">> Evaluating trained ensemble on out-dataset " + str(out_data))
 
@@ -171,7 +175,7 @@ class MahalanobisRegression:
         plt.savefig(self.save_path + 'roc_{}_{}_{}_{}_ensemble.png'.format(self.test_noise, self.in_data, self.val_data, out_data))
 
         tpr90_pos_idx = np.abs(tpr - .90).argmin()
-        self.tnr_at_tpr95[out_data] = tnr[tpr90_pos_idx]
+        self.tnr_at_tpr90[out_data] = tnr[tpr90_pos_idx]
         self.auroc[out_data] = metrics.roc_auc_score(y, y_pred)
 
         if args.verbose:
